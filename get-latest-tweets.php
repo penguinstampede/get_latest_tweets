@@ -75,28 +75,18 @@ class Get_Latest_Tweets {
 	public static function get_json_from_twitter( $username, $count ) {
 		require 'tmhOAuth.php';
 
-		$configFilePath = dirname( __FILE__ ) . DIRECTORY_SEPARATOR . 'twitter.api.keys.json';
-		if ( ! file_exists( $configFilePath ) ) {
-			die( esc_html( "Could not find config file ($configFilePath)" ) );
+		$config = self::get_twitter_keys();
+
+		if( !$config ){
+			die( 'You do not have your constants set, please set them in your wp-config.php file.' );
 		}
 
-		$rawConfig = file_get_contents( $configFilePath );
-		if ( ! $rawConfig ) {
-			die( esc_html( "Could not read config file ($configFilePath)" ) );
-		}
-
-		$config = json_decode( $rawConfig );
-
-		$tmhOAuth = new tmhOAuth(array(
-			'consumer_key'    => $config->consumer_key,
-			'consumer_secret' => $config->consumer_secret,
-			'user_token'      => $config->user_token,
-			'user_secret'     => $config->user_secret,
-		));
+		$tmhOAuth = new tmhOAuth($config);
 
 		$code = $tmhOAuth->request('GET', $tmhOAuth->url( '1.1/statuses/user_timeline' ), array(
 			'screen_name' => $username,
 		));
+
 		$json = $tmhOAuth->response['response'];
 
 		if ( ! $json ) {
@@ -127,6 +117,30 @@ class Get_Latest_Tweets {
 
 		$json = self::get_json_from_twitter( $username, $count );
 		return file_put_contents( self::cache_file_name( $username ), $json );
+	}
+
+	public static function get_twitter_keys() {
+		$config = array();
+
+		if ( defined( 'GLT_TWITTER_CONSUMER_KEY' ) ) {
+			$config['consumer_key'] = GLT_TWITTER_CONSUMER_KEY;
+		}
+		if ( defined( 'GLT_TWITTER_CONSUMER_SECRET' ) ) {
+			$config['consumer_secret'] = GLT_TWITTER_CONSUMER_SECRET;
+		}
+		if ( defined( 'GLT_TWITTER_USER_TOKEN' ) ) {
+			$config['user_token'] = GLT_TWITTER_USER_TOKEN;
+		}
+		if ( defined( 'GLT_TWITTER_USER_SECRET' ) ) {
+			$config['user_secret'] = GLT_TWITTER_USER_SECRET;
+		}
+
+		if( count($config) == 4 ){
+			return $config;
+		} else {
+			return false;
+		}
+
 	}
 
 	public static function read_cached_json( $username ) {
